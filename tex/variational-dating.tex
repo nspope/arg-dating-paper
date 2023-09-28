@@ -11,15 +11,158 @@
 \maketitle
 
 \section{Introduction} (todo: Peter)
-\begin{itemize}
-\item What are ancestral recombination graphs, what information do they contain, how are they inferred.
-\item Why do we care about dating vertices (or improve existing dating of vertices) in a scalable way? Tree sequences as concise, biologically informative data format. 
-\item Why do we care about capturing/propagating uncertainty? How can we do so in a concise way? (eg for downstream analysis)
-\end{itemize}
 
-Notes:
-argweaver: does it but can't store it compactly even if it could scale
-compare to relate (which sorta has uncertainty by having diff dates for the "same" node)
+% \begin{itemize}
+% \item What are ancestral recombination graphs, what information do they contain, how are they inferred.
+% \item Why do we care about dating vertices (or improve existing dating of vertices) in a scalable way? Tree sequences as concise, biologically informative data format. 
+% \item Why do we care about capturing/propagating uncertainty? How can we do so in a concise way? (eg for downstream analysis)
+% \end{itemize}
+% 
+% Notes:
+% argweaver: does it but can't store it compactly even if it could scale
+% compare to relate (which sorta has uncertainty by having diff dates for the "same" node)
+% 
+% what and why is ARG inference
+% separate the "tree" and "dates" steps
+% 
+% review of existing methods
+% 
+% look back at phylogenetic methods
+% 
+% one difference is us having a prior:
+% mabye not clear how much actual information we have about each tree;
+% look for accurate inference of statistical properties
+% 
+% however other constraints are informative
+% not just bits of the same edges on longer bits of the genome (as Relate does)
+% but also other constraints
+% contrast tree-by-tree methods to full graph methods
+% 
+% Goals: be more accurate and also faster
+% using the graph (and incremental approches on it) can maybe do both
+
+
+Any two vertebrates, present or past,
+share a most recent common ancestor at some point back in time.
+The identification of this branching relationship between species,
+and location of those branching points in time
+has been a goal of evolutionary biology since evolutionary biology was a field.
+In fact, any two individuals certainly share many most recent common ancestors,
+since it is likely that any two homologous pieces of genome,
+unless tightly linked,
+find their common ancestor in a distinct ancestral individual.
+To describe relationships between distinct and well-separated species
+we can often treat the resulting forest as a single tree
+with discrete exceptions due to horizontal gene transfer.
+However, once we look at relationships within species, the picture changes.
+Modern advances in DNA sequencing and computing
+have made it possible to infer genetic relationships between large samples
+over entire genomes,
+a task often framed as ``ARG inference'',
+where \emph{ARG} refers to a \emph{ancestral recombination graph}
+that encodes relationships between sampled genomes and their common ancestral genomes
+\citep[for a discussion of ARGs see][]{ARGreviw}.
+
+An ARG is a subset of the gigantic pedigree that relates everyone to everyone else,
+annotated with additional information about which bits of genome were inherited along the links in that pedigree.
+Having even an imperfect view of true ARGs at a whole-genome scale is groundbreaking
+because it tells us about a potentially huge number of ancestral demographic events:
+each distinct ancestor in an ARG represents an actual ancestor that lived at some time in the past,
+and each common ancestry event in an ARG represents actual siblings sharing genome inherited from a parent.
+Many questions in population genetics 
+might be more directly reframed in terms of statistical properties
+of these historical events.
+
+However, for such inferences to be reliable, we need to understand and improve inference methods \citep{XXX}.
+Although the tasks are not entirely independent,
+a distinction made in several modern inference tools is between \emph{topology} and \emph{dating}:
+first, an algorithm infers the structure of relationships along the genome --
+essentially, identifying distinct ancestral genomic segments and describing
+their relationships to each other and to sampled genomes --
+and then a separate algorithm attempts to estimate how long in the past each of those ancestors lived
+(and possibly the dates of sequenced samples of unknown age).
+This paper focuses on the second of these tasks: given an ARG,
+how can we infer the dates of each ancestral genome?
+
+The task of dating ancestral nodes in a phylogenetic tree is relatively well-understood \citep{felsenstein},
+and great strides have been made incorporating complex models of nucleotide change
+into phylogenetic methods \citep{beast}.
+However, population genetic data work at a different time scale,
+in which the number of mutations per branch is relatively small.
+Therefore, existing methods have thus far remained with the simplest infinite-sites models of mutations
+(??have all of them??),
+as the problem is sufficiently difficult without incorporating models of nucleotide mutation
+(and at a population scale, the additional complexity of state-dependent mutation rates is less important).
+
+In some cases phylogenetic relationships cannot be well-described by one or even a few trees.
+Researchers working on closely related taxa
+with complex, perhaps non-treelike relationships
+(e.g., members of a species complex descended heterogeneously from a different species complex)
+have in a number of studies used standard phylogenetic methods to infer trees separately
+on a large number of distinct windows of the genome,
+revealing complex species relationships often driven by natural selection \citep{pease,stankowski}.
+There exist specialized software to do this \citep[e.g.,]{twist},
+but choosing an appropriate window size (and interpreting the results) can be tricky.
+The situation is subtle because, on the one hand we are fitting an incorrect model
+(i.e., we know that in each window there are many trees, not just one),
+but on the other hand we expect a single inferred tree to provide a useful summary of those trees.
+So, there is a tension between wanting smaller windows
+(so that relationships within each window are closer to treelike)
+and larger windows (so there's enough information to more reliably infer trees).
+The situation is reminiscent of the substantial debate over whether to build species phylogenies
+by concatenating genes and building a single tree
+or by inferring trees for each gene separately and reporting the consensus tree \cite{XXX}. % https://pubmed.ncbi.nlm.nih.gov/15593277/
+Methods that independently infer a single tree for each window
+work best when most of the true trees in a given window share structure,
+as expected when the trees describe relationships between relatively well-separated groups
+with possible long introgressed segments.
+For use cases typical to population genetics,
+these assumptions are not typically true,
+and more sophisticated use of the available information is necessary to get good estimates.
+
+The currently most-used ARG inference methods are tsinfer \cite{XXX}, Relate \cite{XXX}, ARGweaver \cite{XXX}, and ARGneedle \cite{XXX}.
+We focus in this paper on the first two,
+as ARGweaver does not scale to large numbers of samples (although it samples from the full posterior on ARGs),
+and ARG-Needle was only recently released.
+(However, the methods we present here could be applied to any ARG,
+as long as it is convertible to tree sequence format \citep{ts}.)
+These two provide an informative comparison, as -- roughly speaking --
+Relate is closer to a tree-by-tree method,
+while tsinfer is closer to a ``haplotype-copying'' approach \citep{li-and-stephens}.
+
+These two aspects of the data -- ``trees and haplotypes'' --
+create a fundamental tension that various methods navigate in different ways.
+On the one hand, the relationship between sampled genotypes at each location on the genome is described by a single tree,
+inference of trees is well-understood, and trees are very efficient data structures.
+On the other hand, nearby trees share a good deal of structure,
+so inferring a sequence of independent trees leaves out a great deal of information.
+Each ancestor in an ARG can be thought of as a node is a sequence of trees covering a portion of the genome,
+or as an ancestral haplotype that different individuals may have inherited different portions of.
+To get a sense for this, note that as one moves along the genome, the longest branches in a tree relating $n$ samples
+are expected to be of order $n^2$ times as long as the shortest ones.
+This implies that as one moves along the genome,
+the oldest parts of the tree (which tend to be longest) will change roughly $n^2$ times as fast as the youngest parts of the tree.
+Said another way, the longest shared haplotypes tend to be around $n^2$ times as long as the shortest ones.
+This is particularly relevant for the dating problem:
+the extent to which ancestral haplotypes in an inferred ARG extend along the genome
+(i.e., the amount of sharing of node identity between trees)
+determines how much information from many trees can be used to inform the dating of each individual node.
+This information includes both hard constraints
+(e.g., a given ancestor cannot be older than any ancestor it inherits from in any tree)
+and soft constraints
+(e.g., mutations at a given genomic location may inform the dates of many ancestors,
+including whose haplotypes don't cover that location).
+
+Our goal in this paper is to improve the accuracy by which the ages of ancestors in an ARG are inferred,
+while maintaining sufficient computational speed that the method can be applied to Biobank-scale samples.
+The method used previously in tsdate \citep{tsdate}
+leaves room for improvement because approximations were made in XXX;
+here we announce an update to tsdate that substantially improves accuracy TEASER.
+We also discuss dating in Relate XXX SOMETHING.
+The main ingredients in the method are XXX OUTLINE.
+In particular, a key set of observations are around the role of the prior XXX (but mostly discuss this in the discussion).
+
+
 
 \section{Model and variational approximation}
 \begin{itemize}
