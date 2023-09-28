@@ -1,0 +1,80 @@
+\documentclass{article}
+\usepackage{graphicx} % Required for inserting images
+\usepackage{geometry}
+
+\title{Variational dating of ancestral recombination graphs}
+\author{Nathaniel S. Pope, Yan Wong, Andrew Kern, Peter Ralph, others?}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\section{Introduction} (todo: Peter)
+\begin{itemize}
+\item What are ancestral recombination graphs, what information do they contain, how are they inferred.
+\item Why do we care about dating vertices (or improve existing dating of vertices) in a scalable way? Tree sequences as concise, biologically informative data format. 
+\item Why do we care about capturing/propagating uncertainty? How can we do so in a concise way? (eg for downstream analysis)
+\end{itemize}
+
+Notes:
+argweaver: does it but can't store it compactly even if it could scale
+compare to relate (which sorta has uncertainty by having diff dates for the "same" node)
+
+\section{Model and variational approximation}
+\begin{itemize}
+\item Mutational model (Poisson; \textbf{figure:} describe/viz area below a node)
+\item Gamma mixture model for prior (global prior; two or three gammas; updated a few times; explain first with just one (?))
+\item Factorization into prior and edge likelihoods
+\item Fully-factorized gamma variational approximation
+\end{itemize}
+
+\section{Expectation propagation}
+\label{methods}
+\begin{itemize}
+\item Need some criterion for ``goodness of fit" of variational approximation $\rightarrow$ KL divergence; intractability of global minimization problem
+\item Divide-and-conquer; background on expectation propagation
+\item Specific form of edge updates
+\item EM algorithm for updating mixture prior
+\item Least squares correction for branch length constraint to get point estimates
+\item KL minimization is exact for single trees -- that suggests two ways of using the algorithm: go tree by tree but map mutations across trees (Relate); work on the whole ARG (tsinfer)
+\item Variational distribution for mutation ages
+\end{itemize}
+
+
+\section{Simulation experiment}
+\begin{itemize}
+\item Performance on simulated ARG (mutation ages, matched haplotypes, coverage, coalescent rates)
+\item Performance on inferred ARGs (vs old tsdate, Relate, ARGNeedle).
+\item Runtime / complexity
+\end{itemize}
+
+
+\section{Downstream analyses}
+Split up between section \ref{methods} and section \ref{results}
+\begin{itemize}
+\item Coalescent rate estimation via EM : example of propagating uncertainty (in local estimation vs sequence-wide estimation)
+\item Molecular dating of ancient samples : example from simulation? real data?
+\item Marginal likelihood of mutation data conditioned on ARG topology (e.g. node age integrated out of model) -- this gives a residual
+\item Stratify by mutation type / mutation rate / genomic coordinate
+\item Date some famous mutations? Show coverage/accuracy across increasing numbers of samples, making point that scalability is useful [using unified genealogies]
+\end{itemize}
+
+\section{Discussion}
+\begin{itemize}
+\item Reiterate scalability / uncertainty bit
+\item General framework for node-based inference tasks - emphasize needs only moments, could get these any way
+\item Extensions include traits/geography, graph segmentation.
+\end{itemize}
+
+\section{Supplement}
+\begin{itemize}
+\item More background on EP (e.g. what are we minimizing and why does it work? KL minimization via moment matching, replace global KL divergence via Bethe entropy)
+\item Derivation of EP updates (e.g. moment matching)
+\item Implementation of ${_2}F_1$ with gradient
+\item Derivation of EM updates for mixture prior
+\item Derivation of mutation age distribution
+\item Node matching algorithm
+\item Downsampling polytomies
+\end{itemize}
+\end{document}
