@@ -18,9 +18,9 @@ Let $\mathcal{V}, \mathcal{E}$ be the sets of nodes and edges in the ARG. Let $t
 To simplify notation, assume that a given pair of nodes is connected by at most one edge (this assumption is unnecessary in practice) and use $ij \in \mathcal{E}$ to denote the edge connecting parent $i$ to child $j$. Each edge has two dimensions: time $l_{ij} = t_i - t_j$ and genomic span $s_{ij}$ measured in base pairs. If the per-generation, per-base probability of mutation is a constant $\mu \ll 1$, then the probability of $y_{ij}$ mutations occurring along the edge is Poisson, \[
 p(y_{ij} | t_{i} - t_{j}) = \frac{(\mu s_{ij})^{y_{ij}}}{\Gamma(y_{ij} + 1)} (t_i - t_j)^{y_{ij}} \exp\{-\mu s_{ij} (t_i - t_j)\} \mathbb{I}[0 < t_j < t_i]. 
 \]
-Let $p(t_i | \eta_i)$ be a prior distribution on the age of the $i$th internal node with hyperparameters $\eta_i$. The joint distribution of ages and per-edge mutation counts is then,
+Let $p(\bm t | \bm \eta)$ be a joint prior distribution on the ages of the internal nodes, with hyperparameters $\eta$. The joint distribution of ages and per-edge mutation counts is then,
 \[
-p(\bm t, \bm y | \bm \eta) = \prod_{i \in \mathcal{N}} p(t_i | \eta_i) \prod_{ij \in \mathcal{E}} p(y_{ij} | t_i - t_j)
+p(\bm t, \bm y | \bm \eta) = p(\bm t | \bm \eta) \prod_{ij \in \mathcal{E}} p(y_{ij} | t_i - t_j)
 \]
 and the full posterior of node ages is $p(\bm t | \bm y, \bm \eta) = Z^{-1} p(\bm t, \bm y | \bm \eta)$ where $Z = \int p(\bm t, \bm y | \bm \eta) d\bm t$ is the marginal probability of the mutations.
 
@@ -58,17 +58,17 @@ Expectation propagation works by iteratively refining the messages, one at a tim
 \[
 q^{\setminus ij}_{\bm \theta}(\bm t) \propto \frac{q_{\bm \theta}(\bm t)}{q_{i,ij}(t_i) q_{j,ij}(t_j)} \propto \exp\{ \phi(t_i)^T (\theta_i - \theta_{i,ij}) + \phi(t_j)^T (\theta_j - \theta_{j,ij})\} \prod_{k \in \mathcal{V} \setminus i,j} q_k(t_k)
 \]
-The ``target'' is the product of the cavity and the edge factor from the exact unnormalized posterior,
+The ``surrogate'' is the product of the cavity and the edge factor from the exact unnormalized posterior,
 \[
 q^{\setminus ij}_{\bm \theta} p_{ij} (\bm t) \propto q^{\setminus ij}_{\bm \theta}(\bm t) \times p(y_{ij} \mid t_i - t_j)
 \]
-Intuitively, the target is a surrogate for the posterior that is exact locally (e.g. for the edge being refined) and approximate elsewhere. The variational parameters are updated by matching moments against the target:
+Intuitively, the surrogate is an approximation of the posterior that is exact locally (e.g. for the edge being refined) and approximate elsewhere. The variational parameters are updated by matching moments against the surrogate:
 \[
 \argmin_{\bm \theta'} \mathcal{D}( q^{\setminus ij}_{\bm \theta} p_{ij} \| q_{\bm \theta'} ) \implies \mathbb{E}_{q^{\setminus ij}_{\bm \theta} p_{ij}}[\phi(\bm t)] = \mathbb{E}_{q_{\bm \theta'}}[\phi(\bm t)]
 \]
-where the dependence on previous ($\bm \theta$) and updated ($\bm \theta'$) parameters is made explicit. The crucial difference with the global problem (\ref{eq:global-kl-objective}) is that the target is \emph{mostly factorized}, so that $\mathbb{E}_{q^{\setminus ij}_{\bm \theta} p_{ij}}[\phi(\bm t)]$ and $\mathbb{E}_{q_{\bm \theta'}}[\phi(\bm t)]$ only differ for $\phi(t_i)$ and $\phi(t_j)$. Thus, the only variational marginals that need modification are $q_{i}$ and $q_{j}$. The messages are updated by dividing the new approximate posterior by the cavity (equivalent to subtracting natural parameters), so that $\theta'_{i,ij} = \theta'_i - (\theta_i - \theta_{i,ij})$ and $\theta'_{i,ij} = \theta'_i - (\theta_j - \theta_{j,ij})$. 
+where the dependence on previous ($\bm \theta$) and updated ($\bm \theta'$) parameters is made explicit. The crucial difference with the global problem (\ref{eq:global-kl-objective}) is that the surrogate is \emph{mostly factorized}, so that $\mathbb{E}_{q^{\setminus ij}_{\bm \theta} p_{ij}}[\phi(\bm t)]$ and $\mathbb{E}_{q_{\bm \theta'}}[\phi(\bm t)]$ only differ for $\phi(t_i)$ and $\phi(t_j)$. Thus, the only variational marginals that need modification are $q_{i}$ and $q_{j}$. The messages are updated by dividing the new approximate posterior by the cavity (equivalent to subtracting natural parameters), so that $\theta'_{i,ij} = \theta'_i - (\theta_i - \theta_{i,ij})$ and $\theta'_{i,ij} = \theta'_i - (\theta_j - \theta_{j,ij})$. 
 
-What remains is to calculate expectations of gamma sufficient statistics under the target. At this point, it is useful to switch to the typical gamma parametrization, such that $q_{i}(t_i) \propto \exp \{ -t_i \beta_i + \log t_i (\alpha_i - 1) \}$. Then, the normalizer of the target is,
+What remains is to calculate expectations of gamma sufficient statistics under the surrogate. At this point, it is useful to switch to the typical gamma parametrization, such that $q_{i}(t_i) \propto \exp \{ -t_i \beta_i + \log t_i (\alpha_i - 1) \}$. Then, the normalizer of the surrogate is,
 \[
 \begin{aligned}
 Z_{ij} & = \int q^{\setminus ij}_{\bm \theta}(\bm t) p(y_{ij} | t_i - t_j) d\bm t \\
