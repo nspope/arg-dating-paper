@@ -13,27 +13,47 @@
 
 \section{Model and factorized approximation}
 
-Let $\mathcal{V}, \mathcal{E}$ be the sets of nodes and edges in the ARG. Let $t_i$ be the age of the $i$th node measured as generations in the past. Let $\mathcal{S} \subset \mathcal{V}$ be the subset of nodes that are contemporary samples ($t_i = 0, i \in \mathcal{S}$); and $\mathcal{N} \equiv \mathcal{V} \setminus \mathcal{S}$ be the set of internal nodes and non-contemporary samples ($t_i > 0, i \in \mathcal{N}$). 
+Let $\mathcal{V}, \mathcal{E}$ be the sets of nodes and edges in the ARG. 
+Let $t_i$ be the age of the $i$th node measured as generations in the past. 
+Let $\mathcal{S} \subset \mathcal{V}$ be the subset of nodes that are contemporary samples ($t_i = 0, i \in \mathcal{S}$); 
+and $\mathcal{N} \equiv \mathcal{V} \setminus \mathcal{S}$ be the set of internal nodes and non-contemporary samples ($t_i > 0, i \in \mathcal{N}$). 
 
-To simplify notation, assume that a given pair of nodes is connected by at most one edge (this assumption is unnecessary in practice) and use $ij \in \mathcal{E}$ to denote the edge connecting parent $i$ to child $j$. Each edge has two dimensions: time $l_{ij} = t_i - t_j$ and genomic span $s_{ij}$ measured in base pairs. If the per-generation, per-base probability of mutation is a constant $\mu \ll 1$, then the probability of $y_{ij}$ mutations occurring along the edge is Poisson, \[
-p(y_{ij} | t_{i} - t_{j}) = \frac{(\mu s_{ij})^{y_{ij}}}{\Gamma(y_{ij} + 1)} (t_i - t_j)^{y_{ij}} \exp\{-\mu s_{ij} (t_i - t_j)\} \mathbb{I}[0 < t_j < t_i]. 
-\]
-Let $p(\bm t | \bm \eta)$ be a joint prior distribution on the ages of the internal nodes, with hyperparameters $\eta$. The joint distribution of ages and per-edge mutation counts is then,
+To simplify notation, assume that a given pair of nodes is connected by at most one edge 
+(this assumption is unnecessary in practice) 
+and use $ij \in \mathcal{E}$ to denote the edge connecting parent $i$ to child $j$. 
+Each edge has two dimensions: time $l_{ij} = t_i - t_j$ and genomic span $s_{ij}$ measured in base pairs. 
+If the per-generation, per-base probability of mutation is a constant $\mu \ll 1$, 
+then the probability of $y_{ij}$ mutations occurring along the edge is Poisson, 
 \[
-p(\bm t, \bm y | \bm \eta) = p(\bm t | \bm \eta) \prod_{ij \in \mathcal{E}} p(y_{ij} | t_i - t_j)
+  p(y_{ij} | t_{i} - t_{j}) = \frac{(\mu s_{ij})^{y_{ij}}}{\Gamma(y_{ij} + 1)} (t_i - t_j)^{y_{ij}} \exp\{-\mu s_{ij} (t_i - t_j)\} \mathbb{I}[0 < t_j < t_i]. 
 \]
-and the full posterior of node ages is $p(\bm t | \bm y, \bm \eta) = Z^{-1} p(\bm t, \bm y | \bm \eta)$ where $Z = \int p(\bm t, \bm y | \bm \eta) d\bm t$ is the marginal probability of the mutations.
+Let $p(\bm t | \bm \eta)$ be a joint prior distribution on the ages of the internal nodes, 
+with hyperparameters $\eta$. 
+The joint distribution of ages and per-edge mutation counts is then,
+\[
+  p(\bm t, \bm y | \bm \eta) = p(\bm t | \bm \eta) \prod_{ij \in \mathcal{E}} p(y_{ij} | t_i - t_j)
+\]
+and the full posterior of node ages is 
+$p(\bm t | \bm y, \bm \eta) = Z^{-1} p(\bm t, \bm y | \bm \eta)$ 
+where $Z = \int p(\bm t, \bm y | \bm \eta) d\bm t$ is the marginal probability of the mutations.
 
-Exact posterior inference of node ages is not tractable because $Z$ is a high-dimensional integral over an irregular polyhedron. Instead, we construct a variational approximation with the intent of accurately representing the marginal posterior distributions of node ages; that is, we use the fully-factorized approximation $q_{\bm \theta}(\bm t) \approx p(\bm t | \bm y, \bm \eta)$, where
+Exact posterior inference of node ages is not tractable because $Z$ is a high-dimensional integral over an irregular polyhedron. 
+Instead, we construct a variational approximation with the intent of accurately representing the marginal posterior distributions of node ages; 
+that is, we use the fully-factorized approximation $q_{\bm \theta}(\bm t) \approx p(\bm t | \bm y, \bm \eta)$, where
 \[
 \begin{aligned}
 q_{\bm \theta}(\bm t) & = \prod_{i \in \mathcal{N}} q_{\theta_i}(t_i) \\
 q_{\theta_i}(t_i) & \approx p(t_i | \bm y, \bm \eta) = \int p(\bm t | \bm y, \bm \eta) d\bm t^{\setminus i}
 \end{aligned}
 \]
-so that $q_{\theta_i}$ is the approximate marginal from a chosen parametric family (gamma) and $\theta$ are node-specific variational parameters. Thus, uncertainty in the ages of individual nodes is quantified in a manner that is much more concise than Monte Carlo samples (e.g. by storing two variational parameters rather than a large number of samples per node), at the expense of retaining information regarding the joint distribution of ages.
+so that $q_{\theta_i}$ is the approximate marginal from a chosen parametric family (gamma) and $\theta$ are node-specific variational parameters. 
+Thus, uncertainty in the ages of individual nodes is quantified in a manner that is much more concise than Monte Carlo samples 
+(e.g. by storing two variational parameters rather than generating a large number of samples per node), 
+at the expense of retaining information regarding the joint distribution of ages.
 
-From a computational perspective, this approximation scheme converts the integration problem into an optimization problem: find the values of $\bm \theta$ that produce the best approximation according to some distributional measure of goodness-of-fit. For example, by minimizing the Kullback-Leiber divergence via moment matching of sufficient statistics (Appendix \ref{supp:kl-minimization}),
+From a computational perspective, this approximation scheme converts the integration problem into an optimization problem: 
+find the values of $\bm \theta$ that produce the best approximation according to some distributional measure of goodness-of-fit. 
+For example, by minimizing the Kullback-Leiber divergence via moment matching of sufficient statistics (Appendix \ref{supp:kl-minimization}),
 \begin{equation}
 \label{eq:global-kl-objective}
 \argmin_{\bm \theta} \int p(\bm t | \bm y , \bm \eta) \log \frac{p(\bm t | \bm y , \bm \eta)}{q_{\bm \theta}(\bm t)} d\bm t \implies \mathbb{E}_p[\phi(\bm t)] = \mathbb{E}_{q_{\bm \theta}}[\phi(\bm t)]
@@ -42,21 +62,34 @@ where $\phi(\bm t) = \{(t_i, \log t_i)~\forall i \in \mathcal{N}\}$ are gamma su
 
 
 \section{Expectation propagation}
-\label{sec-exp-prop}
+\label{sec:exp-prop}
 
-However, the minimization in Equation \ref{eq:global-kl-objective} is still intractable, because computing $\mathbb{E}_p[\phi(\bm t)]$ also involves a high-dimensional integral. Instead, we use ``expectation propagation'' \cite{minka2002expectation}, which approximates the global optimization problem with an iterated series of local problems.
+However, the minimization in Equation \ref{eq:global-kl-objective} is still intractable, 
+because computing $\mathbb{E}_p[\phi(\bm t)]$ also involves a high-dimensional integral. 
+Instead, we use ``expectation propagation'' \cite{minka2002expectation}, 
+which approximates the global optimization problem with an iterated series of local problems.
 
-Because the variational marginals $q_{\theta_i}$ belong to the same exponential family, they may be arbitrarily factorized into
+Because the variational marginals $q_{\theta_i}$ belong to the same exponential family, 
+they may be arbitrarily factorized into
 \[
 q_{\theta_i}(t_i) \propto \exp\{ \phi(t_i)^T \theta_i \} = \prod_k \exp\{\phi(t_i)^T \theta_{i,k}  \}    
 \]
-where $\sum_k \theta_{i,k} = \theta_i$ Note that the individual factors have the same form as the original distribution -- e.g. are log-linear with the same sufficient statistics -- but are not required to have a finite integral (as long as their product can be normalized). Thus, \ref{eq:factorized-approximation} may be rewritten as,
+where $\sum_k \theta_{i,k} = \theta_i$. 
+Note that the individual factors have the same form as the original distribution -- 
+e.g. are log-linear with the same sufficient statistics -- 
+but are not required to have a finite integral (as long as their product can be normalized). 
+Thus, \ref{eq:factorized-approximation} may be rewritten as,
 \[
 q_{\bm \theta}(\bm t) = \prod_{i \in \mathcal{N}} q_i(t_i) \propto \prod_{i \in \mathcal{N}} q_{i,0}(t_i) \prod_{ij \in \mathcal{E}} q_{i,ij}(t_i) q_{j,ij}(t_j)
 \]
-where we have used the shorthand $q_{i,k} \equiv q_{\theta_{i,k}}$. In words, the variational marginals for each node are split into ``messages'' that correspond to the prior and edges, mimicking the form of the unnormalized posterior. For the moment we assume that the prior for each node is a gamma distribution, so that $q_{i,0}(t_i) \propto p(t_i | \eta_i)$. 
+where we have used the shorthand $q_{i,k} \equiv q_{\theta_{i,k}}$. 
+In words, the variational marginals for each node are split into ``messages'' that correspond to the prior and edges, 
+mimicking the form of the unnormalized posterior. 
+For the moment we assume that the prior for each node is a gamma distribution, 
+so that $q_{i,0}(t_i) \propto p(t_i | \eta_i)$. 
 
-Expectation propagation works by iteratively refining the messages, one at a time. For edge $ij$, the ``cavity'' distribution is the approximation without the $ij$-th factor,
+Expectation propagation works by iteratively refining the messages, one at a time. 
+For edge $ij$, the ``cavity'' distribution is the approximation without the $ij$-th factor,
 \[
 q^{\setminus ij}_{\bm \theta}(\bm t) \propto \frac{q_{\bm \theta}(\bm t)}{q_{i,ij}(t_i) q_{j,ij}(t_j)} \propto \exp\{ \phi(t_i)^T (\theta_i - \theta_{i,ij}) + \phi(t_j)^T (\theta_j - \theta_{j,ij})\} \prod_{k \in \mathcal{V} \setminus i,j} q_k(t_k)
 \]
@@ -64,49 +97,92 @@ The ``surrogate'' is the product of the cavity and the edge factor from the exac
 \[
 q^{\setminus ij}_{\bm \theta} p_{ij} (\bm t) \propto q^{\setminus ij}_{\bm \theta}(\bm t) \times p(y_{ij} \mid t_i - t_j)
 \]
-Intuitively, the surrogate is an approximation of the posterior that is exact locally (e.g. for the edge being refined) and approximate elsewhere. The variational parameters are updated by matching moments against the surrogate:
+Intuitively, the surrogate is an approximation of the posterior that is exact locally 
+(e.g. for the edge being refined) and approximate elsewhere. 
+The variational parameters are updated by matching moments against the surrogate:
 \[
 \argmin_{\bm \theta'} \mathcal{D}( q^{\setminus ij}_{\bm \theta} p_{ij} \| q_{\bm \theta'} ) \implies \mathbb{E}_{q^{\setminus ij}_{\bm \theta} p_{ij}}[\phi(\bm t)] = \mathbb{E}_{q_{\bm \theta'}}[\phi(\bm t)]
 \]
-where the dependence on previous ($\bm \theta$) and updated ($\bm \theta'$) parameters is made explicit. The crucial difference with the global problem (\ref{eq:global-kl-objective}) is that the surrogate is \emph{mostly factorized}, so that $\mathbb{E}_{q^{\setminus ij}_{\bm \theta} p_{ij}}[\phi(\bm t)]$ and $\mathbb{E}_{q_{\bm \theta'}}[\phi(\bm t)]$ only differ for $\phi(t_i)$ and $\phi(t_j)$. Thus, the only variational marginals that need modification are $q_{i}$ and $q_{j}$. The messages are updated by dividing the new approximate posterior by the cavity (equivalent to subtracting natural parameters), so that $\theta'_{i,ij} = \theta'_i - (\theta_i - \theta_{i,ij})$ and $\theta'_{i,ij} = \theta'_i - (\theta_j - \theta_{j,ij})$. 
+where the dependence on previous ($\bm \theta$) and updated ($\bm \theta'$) parameters is made explicit. 
+The crucial difference with the global problem (\ref{eq:global-kl-objective}) is that the surrogate is \emph{mostly factorized}, 
+so that $\mathbb{E}_{q^{\setminus ij}_{\bm \theta} p_{ij}}[\phi(\bm t)]$ and $\mathbb{E}_{q_{\bm \theta'}}[\phi(\bm t)]$ only differ for $\phi(t_i)$ and $\phi(t_j)$. 
+Thus, the only variational marginals that need modification are $q_{i}$ and $q_{j}$. 
+The messages are updated by dividing the new approximate posterior by the cavity (equivalent to subtracting natural parameters), 
+so that $\theta'_{i,ij} = \theta'_i - (\theta_i - \theta_{i,ij})$ and 
+$\theta'_{i,ij} = \theta'_i - (\theta_j - \theta_{j,ij})$. 
 
-What remains is to calculate expectations of gamma sufficient statistics under the surrogate. At this point, it is useful to switch to the canonical gamma parametrization, such that $q_{i}(t_i) \propto \exp \{ -t_i \beta_i + \log t_i (\alpha_i - 1) \}$. Then, the normalizer of the surrogate is,
+What remains is to calculate expectations of gamma sufficient statistics under the surrogate. 
+At this point, it is useful to switch to the canonical gamma parametrization, 
+such that $q_{i}(t_i) \propto \exp \{ -t_i \beta_i + \log t_i (\alpha_i - 1) \}$. 
+Then, the normalizer of the surrogate is,
 \[
 \begin{aligned}
 Z_{ij} & = \int q^{\setminus ij}_{\bm \theta}(\bm t) p(y_{ij} | t_i - t_j) d\bm t \\
 & = C \times \frac{\mathcal{B}(y_{ij} + 1, \alpha_j) \Gamma(\alpha_i + \alpha_j + y_{ij})}{(\mu s_{ij} + \beta_i)^{\alpha_i + \alpha_j + y_{ij}}} {_2}F{_1}\left( {{\alpha_j,  \alpha_i + \alpha_j + y_{ij} } \atop {\alpha_j + y_{ij} + 1}}; \frac{\mu s_{ij} - \beta_j}{\mu s_{ij} + \beta_i} \right)
 \end{aligned}
 \]
-where ${_2}F{_1}$ is the Gaussian hypergeometric function and $C$ is an irrelevant term that depends on the unmodified variational parameters. If node $j$ is a contemporary sample ($t_j = 0$) this simplifies to $Z_{ij} = C \times \Gamma(\alpha_i + y_{ij}) (\mu s_{ij} + \beta_i)^{-\alpha_i - y_{ij}}$. The derivation is given in Appendix \ref{supp:2f1-proofs}. Because the surrogate is also an exponential family (albeit an atypical one), the expected sufficient statistics are
+where ${_2}F{_1}$ is the Gaussian hypergeometric function and $C$ is an irrelevant term that depends on the unmodified variational parameters. 
+If node $j$ is a contemporary sample ($t_j = 0$) this simplifies to $Z_{ij} = C \times \Gamma(\alpha_i + y_{ij}) (\mu s_{ij} + \beta_i)^{-\alpha_i - y_{ij}}$. 
+The derivation is given in Appendix \ref{supp:2f1-proofs}. 
+Because the surrogate is also an exponential family (albeit an atypical one), the expected sufficient statistics are
 \[
 \begin{aligned}
 \mathbb{E}_{q^{\setminus ij}_{\bm \theta} p_{ij}}[t_i] = -\frac{\partial \log Z_{ij}}{\partial \beta_i},~~~ \mathbb{E}_{q^{\setminus ij}_{\bm \theta} p_{ij}}[\log t_i] = \frac{\partial \log Z_{ij}}{\partial \alpha_i} \\
 \mathbb{E}_{q^{\setminus ij}_{\bm \theta} p_{ij}}[t_j] = -\frac{\partial \log Z_{ij}}{\partial \beta_j},~~~ \mathbb{E}_{q^{\setminus ij}_{\bm \theta} p_{ij}}[\log t_j] = \frac{\partial \log Z_{ij}}{\partial \alpha_j} \\
 \end{aligned}
 \] 
-The partial derivatives may be efficiently calculated by taking a Taylor expansion of ${_2}F{_1}$ and differentiating term-by-term (Appendix \ref{supp:2f1-computation}). Once moments are in hand, Newton's method is used to find the corresponding values of $\theta'_i, \theta'_j$ (Appendix \ref{supp:gamma-kl-min}).
+The partial derivatives may be efficiently calculated by taking a Taylor expansion of ${_2}F{_1}$ and differentiating term-by-term (Appendix \ref{supp:2f1-computation}). 
+Once moments are in hand, Newton's method is used to find the corresponding values of $\theta'_i, \theta'_j$ (Appendix \ref{supp:gamma-kl-min}).
 
-Expectation propagation converges to a fixed point that is often very close to the global minimum (\ref{eq:global-kl-objective}) \cite{cunningham2014gaussian}, and may be parallelized over edges (e.g. by using the same initial $\bm \theta$ for each edge update, then summing messages to get $\bm \theta'$).
+Expectation propagation converges to a fixed point that is often very close to the global minimum (\ref{eq:global-kl-objective}) \cite{cunningham2014gaussian}, 
+and may be parallelized over edges 
+(e.g. by using the same initial $\bm \theta$ for each edge update, then summing messages to get $\bm \theta'$).
 
 
 \section{Global mixture prior}
 
-In section \ref{sec-exp-prop}, we assumed generic gamma priors for particular nodes without specifying how these are determined.
-The ages of ancestral nodes are the outcome of a complex stochastic process (e.g. assortative mating among a finite number of individuals). The structure of the genealogical process should impose relatively strong constraints on node ages. For example, under the standard coalescent model for a panmictic population, the waiting times between successive coalescence events in marginal trees are exponentially distributed with a mean that is inversely proportional to population size. If population size fluctates strongly over time, then nodes will be temporally concentrated into ``bursts'' of coalescences during population bottlenecks.
+In \S \ref{sec:exp-prop}, we assumed generic gamma priors for particular nodes without specifying how these are determined.
+The ages of ancestral nodes are the outcome of a complex stochastic process 
+(e.g. assortative mating among a finite number of individuals). 
+The structure of the genealogical process should impose relatively strong constraints on node ages. 
+For example, under the standard coalescent model for a panmictic population the waiting times between 
+successive coalescence events within a marginal tree are exponentially distributed, 
+with a mean that is inversely proportional to population size. 
+If population size fluctates strongly over time, 
+then nodes will be temporally concentrated into ``bursts'' of coalescences during population bottlenecks.
 
-On the one hand, incorporating information from the global genealogical process is crucial for accurate inference, because mutational data are typically sparse. One the other hand, specifying a parameterized genealogical process for inferred ARGs that is both tractable and robust is challenging, and inevitably prone to misspecification. Thus, we aim to empirically estimate the distribution of coalescence times without reference to a particular genealogical model (e.g. using mutational data alone), and leverage this global information to improve individual predictions. 
+On the one hand, incorporating information from the global genealogical process is crucial for accurate inference, 
+because mutational data are typically sparse. 
+One the other hand, specifying a parameterized genealogical process for an inferred ARG that is both tractable and robust is challenging, and inevitably prone to misspecification. 
+Thus, we aim to empirically estimate the distribution of coalescence times without reference to a particular genealogical model 
+(e.g. using mutational data alone), 
+and leverage this global information to improve individual predictions. 
 
-To this end, we employ a mixture of gamma distributions for a prior, with hyperparameters that are estimated during each EP iteration from the current variational approximation. Explicitly, let the hyperparameters $\eta_k = \{ \omega_k, \gamma_k, \kappa_k \}$ be the mixture weight, shape, and rate for the $k$th mixture component. The prior for the $i$th node is,
+To this end, we employ a mixture of gamma distributions for a prior, 
+with hyperparameters that are estimated during each EP iteration from the current variational approximation. 
+Explicitly, let the hyperparameters $\eta_k = \{ \omega_k, \gamma_k, \kappa_k \}$ 
+be the mixture weight, shape, and rate for the $k$th mixture component. 
+The prior for the $i$th node is,
 \[
   p(t_i | \bm \eta) \propto \sum_{k=1}^K \delta_{i,k} \frac{\omega_k \kappa_k^{\gamma_k}}{\Gamma(\gamma_k)} \exp \{(\gamma_k - 1) \log t_i - \kappa_k t_i \}
 \]
-where the node-specific weights $\delta_{i,k}$ are assumed to be specified \emph{a priori}, so that the choice $\delta_{i,k} = 1$ leads to an i.i.d. prior across nodes. Other choices of $\delta$ allow stratification of the prior across frequency classes or windows along the genome. As before, the variational marginals for nodes are updated by removing the messages due to the prior to get the cavity $q_{\bm \theta}^{\setminus 0}(\bm t) \propto q_{\bm \theta}(\bm t) / \prod_{i} q_{i,0}(t_i)$ with natural parameters $\theta_i^{\setminus 0} = \theta_i - \theta_{i,0}$ and then matching moments against the surrogate $q^{\setminus 0}(\bm t) \prod_{i} p(t_i | \bm \eta)$. 
+where the node-specific weights $\delta_{i,k}$ are assumed to be specified \emph{a priori}, 
+so that the choice $\delta_{i,k} = 1$ leads to an i.i.d. prior across nodes. 
+Other choices of $\delta$ allow stratification of the prior across frequency classes or windows along the genome. 
+As before, the messages due to the prior are removed from the variational approximation to create the cavity 
+$q_{\bm \theta}^{\setminus 0}(\bm t) \propto q_{\bm \theta}(\bm t) / \prod_{i} q_{i,0}(t_i)$ 
+with natural parameters $\theta_i^{\setminus 0} = \theta_i - \theta_{i,0}$ 
+and then updated by matching moments against the surrogate $q^{\setminus 0}(\bm t) \prod_{i} p(t_i | \bm \eta)$. 
 
-We extend this standard EP update with an expectation-maximization (EM) procedure that finds optimal hyperparameters for the surrogate. EM augments the model with per-node binary variables $z_{i,k}$ that indicate if node $i$ belongs to mixture component $k$: 
+We extend this standard EP update with an expectation-maximization (EM) 
+procedure that finds optimal hyperparameters for the surrogate. 
+EM augments the model with per-node binary variables $z_{i,k}$ 
+that indicate if node $i$ belongs to mixture component $k$: 
 \[
   g(\bm t, \bm z | \bm \eta) \propto q_{\bm \theta}^{\setminus 0}(\bm t) \prod_{k=1}^K \prod_{i \in \mathcal{N}} \left( \frac{\delta_{i,k} \omega_{k} \kappa_k^{\gamma_k}}{\Gamma(\gamma_k)}\exp\{(\gamma_k - 1) \log t_i - \kappa_k t_i\} \right)^{z_{i,k}}
 \]
-Let $g_n \equiv g(\bm t, \bm z | \bm \eta^{(n)})$ denote the augmented surrogate at the $n$th EM iteration. The expectation step yields the objective function,
+Let $g_n \equiv g(\bm t, \bm z | \bm \eta^{(n)})$ denote the augmented surrogate at the $n$th EM iteration. 
+The expectation step yields the objective function,
 \[
   \begin{aligned}
     Q(\bm \eta^{(n+1)} & \parallel \bm \eta^{(n)}) = \mathbb{E}_{g_n}[\log g_{n+1}] \\
@@ -122,16 +198,23 @@ where the necessary expectations involve standard manipulations of gamma distrib
     \mathbb{E}_{g_n}[z_{i,k} t_i] & = \mathbb{E}_{g_n}[z_{i,k}] \frac{\gamma^{(n)}_k + \alpha_i^{\setminus 0} - 1}{\kappa^{(n)}_k + \beta_i^{\setminus 0}} \\
   \end{aligned}
 \]
-and we've used the canonical parameterization $\theta_i^{\setminus 0} = \{\alpha^{\setminus 0}_i - 1, -\beta^{\setminus 0}_i \}$. The maximization step $\bm \eta^{(n+1)} = \argmax_{\bm \eta'} Q(\bm \eta' \parallel \bm \eta^{(n)})$ gives the updates,
+and we've used the canonical parameterization 
+$\theta_i^{\setminus 0} = \{\alpha^{\setminus 0}_i - 1, -\beta^{\setminus 0}_i \}$. 
+The maximization step $\bm \eta^{(n+1)} = \argmax_{\bm \eta'} Q(\bm \eta' \parallel \bm \eta^{(n)})$ gives the updates,
 \[
   \begin{aligned}
   \omega_k^{(n+1)} & \propto \sum_{i \in \mathcal{N}} \mathbb{E}_{g_n}[z_{i,k}] \\
   \gamma_k^{(n+1)}, \kappa_k^{(n+1)} & = \argmax_{\gamma', \kappa' > 0}~(\gamma' - 1) \sum_{i \in \mathcal{N}} \mathbb{E}_{g_n}[z_{i,k} \log t_i] - \kappa' \sum_{i \in \mathcal{N}} \mathbb{E}_{g_n}[z_{i,k} t_i] - (\log\Gamma(\gamma') - \gamma' \log \kappa')\sum_{i \in \mathcal{N}}\mathbb{E}_{g_n}[z_{i,k}]  \\
   \end{aligned}
 \] 
-Note that the second line is equivalent to finding maximum likelihood estimates from sufficient statistics (e.g. using \cite{gamma-mle}). Upon convergence, integrating over the optimized surrogate yields the approximate posterior moments for the ages of individual nodes,
+Note that the second line is equivalent to finding maximum likelihood estimates from sufficient statistics 
+(e.g. using \cite{gamma-mle}). 
+Upon convergence, integrating over the optimized surrogate yields 
+the approximate posterior moments for the ages of individual nodes,
 $\mathbb{E}_{q^{\setminus 0} p_0} [t_i] = \sum_k \mathbb{E}_{\hat{g}}[z_{i,k} t_i]$ and $\mathbb{E}_{q^{\setminus 0} p_0} [\log t_i] = \sum_k \mathbb{E}_{\hat{g}}[z_{i,k} \log t_i]$,
-that are used to calculate updated variational parameters $\theta'_i$ and prior messages $\theta'_{i,0} = \theta'_{i} - \theta_{i}^{\setminus 0}$. 
-The number of mixture components used in the prior may be selected via the marginal likelihood approximation described in section \ref{sec-marginal-likelihood}.
+that are used to calculate updated variational parameters $\theta'_i$ 
+and prior messages $\theta'_{i,0} = \theta'_{i} - \theta_{i}^{\setminus 0}$. 
+The number of mixture components used in the prior may be selected 
+via the marginal likelihood approximation described in \S \ref{sec:marginal-likelihood}.
 
 \end{document}
